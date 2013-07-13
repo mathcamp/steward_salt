@@ -33,7 +33,7 @@ def do_salt_cmd(request):
     args = request.param('arg', [], type=list)
     kwargs = request.param('kwarg', {}, type=dict)
     expr_form = request.param('expr_form', 'glob')
-    timeout = request.param('timeout', 180, type=int)
+    timeout = request.param('timeout', 10, type=int)
     return request.salt.cmd(tgt, cmd, arg=args, timeout=timeout,
                             expr_form=expr_form, kwarg=kwargs)
 

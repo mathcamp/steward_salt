@@ -1,4 +1,5 @@
 """ steward_salt client commands """
+from pprint import pprint
 
 def do_salt(client, tgt, cmd, *args, **kwargs):
     """

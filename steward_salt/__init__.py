@@ -82,6 +82,7 @@ def includeme(config):
     config.add_route('salt', '/salt')
     config.add_route('salt_call', '/salt/call')
     config.add_route('salt_key', '/salt/key')
+    config.add_route('salt_match', '/salt/match')
     config.add_acl_from_settings('salt')
     salt_conf = settings.get('salt.master_config', '/etc/salt/master')
     config.registry.salt_opts = salt.config.master_config(salt_conf)

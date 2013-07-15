@@ -1,5 +1,23 @@
 """ steward_salt endpoints """
 from pyramid.view import view_config
+import fnmatch
+import re
+
+@view_config(route_name='salt_match', renderer='json', permission='salt')
+def salt_match(request):
+    """ Get a list of minions that match a salt target """
+    tgt = request.param('tgt')
+    expr_form = request.param('expr_form', 'glob')
+    minions = request.salt_key.list_keys()['minions']
+    if expr_form == 'glob':
+        return [minion for minion in minions if fnmatch.fnmatch(minion, tgt)]
+    elif expr_form == 'pcre':
+        return [minion for minion in minions if re.match(tgt, minion)]
+    elif expr_form == 'list':
+        targeted = set(tgt.split(','))
+        return [minion for minion in minions if minion in targeted]
+    else:
+        return None
 
 @view_config(route_name='salt', renderer='json', permission='salt')
 def do_salt_cmd(request):

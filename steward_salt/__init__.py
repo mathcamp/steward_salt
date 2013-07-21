@@ -1,12 +1,10 @@
 """ Steward extension that integrates with salt """
-from ConfigParser import NoOptionError
 import json
-import threading
-
 import salt.client
 import salt.config
 import salt.key
 import salt.utils
+import threading
 
 
 def validate_state(retval):
@@ -54,10 +52,7 @@ class EventListener(threading.Thread):
     """
     def __init__(self, config, tasklist):
         super(EventListener, self).__init__()
-        try:
-            salt_conf = config.get('app:steward', 'salt.master_config')
-        except NoOptionError:
-            salt_conf = '/etc/salt/master'
+        salt_conf = config.get('salt.master_config', '/etc/salt/master')
         salt_opts = salt.config.master_config(salt_conf)
         self.daemon = True
         self.tasklist = tasklist

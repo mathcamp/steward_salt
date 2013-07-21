@@ -1,4 +1,5 @@
 """ Steward extension that integrates with salt """
+from ConfigParser import NoOptionError
 import json
 import threading
 
@@ -51,12 +52,16 @@ class EventListener(threading.Thread):
     events
 
     """
-    def __init__(self, config):
+    def __init__(self, config, tasklist):
         super(EventListener, self).__init__()
+        try:
+            salt_conf = config.get('app:steward', 'salt.master_config')
+        except NoOptionError:
+            salt_conf = '/etc/salt/master'
+        salt_opts = salt.config.master_config(salt_conf)
         self.daemon = True
-        self._config = config
-        self.event = salt.utils.event.MasterEvent(
-            config.registry.salt_opts['sock_dir'])
+        self.tasklist = tasklist
+        self.event = salt.utils.event.MasterEvent(salt_opts['sock_dir'])
 
     def run(self):
         while True:
@@ -64,14 +69,19 @@ class EventListener(threading.Thread):
             if data:
                 if 'tag' in data:
                     name = 'salt/' + data['tag']
-                    self._config.post('pub', data={'name':name,
-                                                   'data':json.dumps(data)})
+                    self.tasklist.post('pub', data={'name':name,
+                                                    'data':json.dumps(data)})
 
 
 def include_client(client):
     """ Add commands to client """
     client.set_cmd('salt', 'steward_salt.client.do_salt')
     client.set_cmd('salt.call', 'steward_salt.client.do_salt_call')
+
+def include_tasks(config, tasklist):
+    """ Add tasks """
+    event = EventListener(config, tasklist)
+    event.start()
 
 def includeme(config):
     """ Configure the app """
@@ -88,5 +98,3 @@ def includeme(config):
     config.registry.salt_opts = salt.config.master_config(salt_conf)
 
     config.scan()
-    event = EventListener(config)
-    event.start()

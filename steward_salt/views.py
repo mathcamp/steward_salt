@@ -5,7 +5,16 @@ import re
 
 @view_config(route_name='salt_match', renderer='json', permission='salt')
 def salt_match(request):
-    """ Get a list of minions that match a salt target """
+    """
+    Get a list of minions that match a salt target
+
+    Notes
+    =====
+    This is currently incomplete and only works for certain expr_forms. Salt
+    does not expose their matching API. See
+    https://github.com/saltstack/salt/issues/4957 for more details.
+
+    """
     tgt = request.param('tgt')
     expr_form = request.param('expr_form', 'glob')
     minions = request.salt_key.list_keys()['minions']

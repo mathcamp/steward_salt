@@ -49,7 +49,7 @@ def do_salt_call(request):
     kwargs = request.param('kwarg', {}, type=dict)
     for key, value in kwargs.iteritems():
         # We have to split it because yaml ends with \n...\n
-        yaml_val = yaml.safe_dump(value).split('\n')[0]
+        yaml_val = yaml.safe_dump(value).split('...')[0].strip()
         args.append('%s=%s' % (key, yaml_val))
     return request.salt_caller.function(cmd, *args)
 

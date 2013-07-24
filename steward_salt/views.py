@@ -1,4 +1,5 @@
 """ steward_salt endpoints """
+import yaml
 from pyramid.view import view_config
 import fnmatch
 import re
@@ -46,7 +47,11 @@ def do_salt_call(request):
     cmd = request.param('cmd')
     args = request.param('arg', [], type=list)
     kwargs = request.param('kwarg', {}, type=dict)
-    return request.salt_caller.function(cmd, *args, **kwargs)
+    for key, value in kwargs.iteritems():
+        # We have to split it because yaml ends with \n...\n
+        yaml_val = yaml.safe_dump(value).split('\n')[0]
+        args.append('%s=%s' % (key, yaml_val))
+    return request.salt_caller.function(cmd, *args)
 
 @view_config(route_name='salt_key', renderer='json', permission='salt')
 def do_salt_key(request):

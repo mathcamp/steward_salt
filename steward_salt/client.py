@@ -36,20 +36,20 @@ def do_salt(client, tgt, cmd, *args, **kwargs):
     response = client.cmd('salt', **data)
     pprint(response.json())
 
-def do_salt_call(client, cmd, *args, **kwargs):
+def do_salt_call(client, mod, *args, **kwargs):
     """
     Run a salt command on the server
 
     Parameters
     ----------
-    cmd : str
+    mod : str
         The salt module to run
-    args : list
+    *args : list
         List of positional arguments to pass to the command
-    kwargs : dict
+    **kwargs : dict
         Dict of keyword arguments to pass to the command
 
     """
-    response = client.cmd('salt/call', cmd=cmd, arg=args, kwarg=kwargs)
+    response = client.cmd('salt/call', cmd=mod, arg=args, kwarg=kwargs)
     pprint(response.json())
 

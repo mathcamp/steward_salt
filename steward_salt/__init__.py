@@ -1,6 +1,6 @@
 """ Steward extension that integrates with salt """
 import json
-import salt.client
+import salt.client.ssh
 import salt.config
 import salt.key
 import salt.utils
@@ -30,6 +30,13 @@ def _salt_client(request):
     if not hasattr(request.registry, 'salt_client'):
         request.registry.salt_client = salt.client.LocalClient()
     return request.registry.salt_client
+
+def _salt_ssh_client(request):
+    """ Get the salt ssh client """
+    if not hasattr(request.registry, 'salt_ssh_client'):
+        request.registry.salt_ssh_client = salt.client.SSHClient()
+    return request.registry.salt_ssh_client
+
 
 def _salt_caller(request):
     """ Get the salt caller """
@@ -71,6 +78,7 @@ class EventListener(threading.Thread):
 def include_client(client):
     """ Add commands to client """
     client.set_cmd('salt', 'steward_salt.client.do_salt')
+    client.set_cmd('salt.ssh', 'steward_salt.client.do_salt_ssh')
     client.set_cmd('salt.call', 'steward_salt.client.do_salt_call')
 
 def include_tasks(config, tasklist):
@@ -84,7 +92,9 @@ def includeme(config):
     config.add_request_method(_salt_client, name='salt', reify=True)
     config.add_request_method(_salt_caller, name='salt_caller', reify=True)
     config.add_request_method(_salt_key, name='salt_key', reify=True)
+    config.add_request_method(_salt_ssh_client, name='salt_ssh', reify=True)
     config.add_route('salt', '/salt')
+    config.add_route('salt_ssh', '/salt/ssh')
     config.add_route('salt_call', '/salt/call')
     config.add_route('salt_key', '/salt/key')
     config.add_route('salt_match', '/salt/match')

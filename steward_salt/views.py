@@ -41,6 +41,18 @@ def do_salt_cmd(request):
     return request.salt.cmd(tgt, cmd, arg=args, timeout=timeout,
                             expr_form=expr_form, kwarg=kwargs)
 
+@view_config(route_name='salt_ssh', renderer='json', permission='salt')
+def do_salt_ssh_cmd(request):
+    """ Run a salt command over ssh """
+    tgt = request.param('tgt')
+    cmd = request.param('cmd')
+    args = request.param('arg', [], type=list)
+    kwargs = request.param('kwarg', {}, type=dict)
+    expr_form = request.param('expr_form', 'glob')
+    timeout = request.param('timeout', 10, type=int)
+    return request.salt_ssh.cmd(tgt, cmd, arg=args, timeout=timeout,
+                            expr_form=expr_form, kwarg=kwargs)
+
 @view_config(route_name='salt_call', renderer='json', permission='salt')
 def do_salt_call(request):
     """ Run a local salt command """

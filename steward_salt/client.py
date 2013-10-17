@@ -1,6 +1,7 @@
 """ steward_salt client commands """
 from pprint import pprint
 
+
 def do_salt(client, tgt, cmd, *args, **kwargs):
     """
     Run a command using salt
@@ -35,6 +36,7 @@ def do_salt(client, tgt, cmd, *args, **kwargs):
         data['expr_form'] = expr_form
     response = client.cmd('salt', **data)
     pprint(response.json())
+
 
 def do_salt_ssh(client, tgt, cmd, *args, **kwargs):
     """
@@ -71,6 +73,7 @@ def do_salt_ssh(client, tgt, cmd, *args, **kwargs):
     response = client.cmd('salt/ssh', **data)
     pprint(response.json())
 
+
 def do_salt_call(client, mod, *args, **kwargs):
     """
     Run a salt command on the server
@@ -88,3 +91,19 @@ def do_salt_call(client, mod, *args, **kwargs):
     response = client.cmd('salt/call', cmd=mod, arg=args, kwarg=kwargs)
     pprint(response.json())
 
+
+def do_omnishell(client):
+    """ Activate the OMNISHELL """
+    from .omnishell import load_dotfile, SaltTerm
+
+    def delegate(transport, tgt, cmd, arg, timeout, expr_form):
+        """ Delegates commands to the salt endpoints """
+        if transport == 'zmq':
+            return client.cmd('salt', tgt=tgt, cmd=cmd, arg=arg,
+                              timeout=timeout, expr_form=expr_form).json()
+        elif transport == 'ssh':
+            return client.cmd('salt/ssh', tgt=tgt, cmd=cmd, arg=arg,
+                              timeout=timeout, expr_form=expr_form).json()
+        else:
+            return "Unknown transport '%s'" % transport
+    SaltTerm().start(delegate, load_dotfile())

@@ -80,6 +80,7 @@ def include_client(client):
     client.set_cmd('salt', 'steward_salt.client.do_salt')
     client.set_cmd('salt.ssh', 'steward_salt.client.do_salt_ssh')
     client.set_cmd('salt.call', 'steward_salt.client.do_salt_call')
+    client.set_cmd('omnishell', 'steward_salt.client.do_omnishell')
 
 def include_tasks(config, tasklist):
     """ Add tasks """

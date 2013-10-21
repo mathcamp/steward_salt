@@ -1,10 +1,15 @@
 """ Steward extension that integrates with salt """
 import json
+import logging
+import threading
+
 import salt.client.ssh
 import salt.config
 import salt.key
 import salt.utils
-import threading
+
+
+LOG = logging.getLogger(__name__)
 
 
 def validate_state(retval):
@@ -80,11 +85,15 @@ class EventListener(threading.Thread):
     def run(self):
         while True:
             data = self.event.get_event()
-            if data:
-                if 'tag' in data:
-                    name = 'salt/' + data['tag']
+            if data and 'tag' in data:
+                name = 'salt/' + data['tag']
+                if 'tok' in data:
+                    del data['tok']
+                try:
                     self.tasklist.post('pub', data={'name': name,
                                                     'data': json.dumps(data)})
+                except:
+                    LOG.exception("Error publishing event")
 
 
 def include_client(client):

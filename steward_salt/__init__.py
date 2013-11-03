@@ -1,8 +1,5 @@
 """ Steward extension that integrates with salt """
-import json
 import logging
-import threading
-
 import salt.client.ssh
 import salt.config
 import salt.key
@@ -31,71 +28,6 @@ def validate_state(retval):
     return success
 
 
-def _salt_client(request):
-    """ Get the salt client """
-    if not hasattr(request.registry, 'salt_client'):
-        request.registry.salt_client = salt.client.LocalClient()
-    return request.registry.salt_client
-
-
-def _salt_ssh_client(request):
-    """ Get the salt ssh client """
-    if not hasattr(request.registry, 'salt_ssh_client'):
-        request.registry.salt_ssh_client = salt.client.SSHClient()
-    return request.registry.salt_ssh_client
-
-
-def _salt_caller(request):
-    """ Get the salt caller """
-    if not hasattr(request.registry, 'salt_caller'):
-        request.registry.salt_caller = salt.client.Caller()
-    return request.registry.salt_caller
-
-
-def _salt_key(request):
-    """ Get a salt Key instance """
-    if not hasattr(request.registry, 'salt_key'):
-        request.registry.salt_key = salt.key.Key(request.registry.salt_opts)
-    return request.registry.salt_key
-
-
-def _salt_checker(request):
-    """ Get the salt Minion Checker """
-    if not hasattr(request.registry, 'salt_checker'):
-        request.registry.salt_checker = salt.utils.minions.CkMinions(
-            request.registry.salt_opts)
-    return request.registry.salt_checker
-
-
-class EventListener(threading.Thread):
-
-    """
-    Background thread that listens for salt events and replays them as steward
-    events
-
-    """
-    def __init__(self, config, tasklist):
-        super(EventListener, self).__init__()
-        salt_conf = config.get('salt.master_config', '/etc/salt/master')
-        salt_opts = salt.config.master_config(salt_conf)
-        self.daemon = True
-        self.tasklist = tasklist
-        self.event = salt.utils.event.MasterEvent(salt_opts['sock_dir'])
-
-    def run(self):
-        while True:
-            data = self.event.get_event()
-            if data and 'tag' in data:
-                name = 'salt/' + data['tag']
-                if 'tok' in data:
-                    del data['tok']
-                try:
-                    self.tasklist.post('pub', data={'name': name,
-                                                    'data': json.dumps(data)})
-                except:
-                    LOG.exception("Error publishing event")
-
-
 def include_client(client):
     """ Add commands to client """
     client.set_cmd('salt', 'steward_salt.client.do_salt')
@@ -104,27 +36,73 @@ def include_client(client):
     client.set_cmd('omnishell', 'steward_salt.client.do_omnishell')
 
 
-def include_tasks(config, tasklist):
+class SaltTaskMixin(object):
+
+    """ Celery task mixin with salt objects """
+    _salt = None
+    _salt_opts = None
+    _salt_ssh = None
+    _salt_caller = None
+    _salt_key = None
+    _salt_checker = None
+
+    @property
+    def salt_opts(self):
+        """ Get the salt opts from the salt config file """
+        if self._salt_opts is None:
+            salt_conf = self.config.settings.get('salt.master_config',
+                                                 '/etc/salt/master')
+            self._salt_opts = salt.config.master_config(salt_conf)
+        return self._salt_opts
+
+    @property
+    def salt(self):
+        """ Get the salt local client """
+        if self._salt is None:
+            self._salt = salt.client.LocalClient()
+        return self._salt
+
+    @property
+    def salt_ssh(self):
+        """ Get the salt-ssh client """
+        if self._salt_ssh is None:
+            self._salt_ssh = salt.client.SSHClient()
+        return self._salt_ssh
+
+    @property
+    def salt_caller(self):
+        """ Get the salt caller """
+        if self._salt_caller is None:
+            self._salt_caller = salt.client.Caller()
+        return self._salt_caller
+
+    @property
+    def salt_key(self):
+        """ Get the salt-key object """
+        if self._salt_key is None:
+            self._salt_key = salt.key.Key(self.salt_opts)
+        return self._salt_key
+
+    @property
+    def salt_checker(self):
+        """ Get the minion checker """
+        if self._salt_checker is None:
+            self._salt_checker = salt.utils.minions.CkMinions(self.salt_opts)
+        return self._salt_checker
+
+
+def include_tasks(config):
     """ Add tasks """
-    event = EventListener(config, tasklist)
-    event.start()
+    config.mixins.append(SaltTaskMixin)
 
 
 def includeme(config):
     """ Configure the app """
-    settings = config.get_settings()
-    config.add_request_method(_salt_client, name='salt', reify=True)
-    config.add_request_method(_salt_caller, name='salt_caller', reify=True)
-    config.add_request_method(_salt_key, name='salt_key', reify=True)
-    config.add_request_method(_salt_ssh_client, name='salt_ssh', reify=True)
-    config.add_request_method(_salt_checker, name='salt_checker', reify=True)
     config.add_route('salt', '/salt')
     config.add_route('salt_ssh', '/salt/ssh')
     config.add_route('salt_call', '/salt/call')
     config.add_route('salt_key', '/salt/key')
     config.add_route('salt_match', '/salt/match')
     config.add_acl_from_settings('salt')
-    salt_conf = settings.get('salt.master_config', '/etc/salt/master')
-    config.registry.salt_opts = salt.config.master_config(salt_conf)
 
     config.scan()

@@ -103,6 +103,5 @@ def includeme(config):
     config.add_route('salt_call', '/salt/call')
     config.add_route('salt_key', '/salt/key')
     config.add_route('salt_match', '/salt/match')
-    config.add_acl_from_settings('salt')
 
     config.scan()
